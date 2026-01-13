@@ -2,18 +2,18 @@ name = "notioncf"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
 
-# D1 Database - Update database_id after running: wrangler d1 create notioncf-db
+# D1 Database
 [[d1_databases]]
 binding = "DB"
 database_name = "notioncf-db"
-database_id = "<your-d1-database-id>"
+database_id = "a57c3449-0157-4e30-bfdc-40a8645681fa"
 
-# KV Namespace - Update id after running: wrangler kv:namespace create CACHE
+# KV Namespace
 [[kv_namespaces]]
 binding = "CACHE"
-id = "<your-kv-namespace-id>"
+id = "9295d7728a28443dbc8346c581d33536"
 
-# R2 Bucket - Create with: wrangler r2 bucket create notioncf-files
-[[r2_buckets]]
-binding = "FILES"
-bucket_name = "notioncf-files"
+# R2 Bucket - Enable R2 in Cloudflare dashboard first, then uncomment
+# [[r2_buckets]]
+# binding = "FILES"
+# bucket_name = "notioncf-files"
