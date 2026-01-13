@@ -1,0 +1,19 @@
+name = "notioncf"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+# D1 Database - Update database_id after running: wrangler d1 create notioncf-db
+[[d1_databases]]
+binding = "DB"
+database_name = "notioncf-db"
+database_id = "<your-d1-database-id>"
+
+# KV Namespace - Update id after running: wrangler kv:namespace create CACHE
+[[kv_namespaces]]
+binding = "CACHE"
+id = "<your-kv-namespace-id>"
+
+# R2 Bucket - Create with: wrangler r2 bucket create notioncf-files
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "notioncf-files"
