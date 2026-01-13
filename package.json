@@ -12,7 +12,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "cf:dev": "wrangler pages dev dist --d1=DB --kv=CACHE --r2=FILES",
-    "cf:deploy": "wrangler pages deploy dist --project-name=notioncf"
+    "cf:deploy": "wrangler pages deploy dist --project-name=notioncf1"
   },
   "dependencies": {
     "@headlessui/react": "^2.1.0",
