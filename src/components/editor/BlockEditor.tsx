@@ -45,6 +45,7 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
   const lastSavedHtmlRef = useRef<string>('');
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
+  const [slashFilter, setSlashFilter] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -83,6 +84,7 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
           left: coords.left,
         });
         setSlashMenuOpen(true);
+        setSlashFilter('');
       } else if (slashMenuOpen) {
         // Check if we're still in a slash command context
         const fullTextBefore = editor.state.doc.textBetween(
@@ -90,8 +92,14 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
           from,
           '\n'
         );
-        if (!fullTextBefore.includes('/')) {
+        const slashIndex = fullTextBefore.lastIndexOf('/');
+        if (slashIndex === -1) {
           setSlashMenuOpen(false);
+          setSlashFilter('');
+        } else {
+          // Extract filter text after the slash
+          const filterText = fullTextBefore.slice(slashIndex + 1);
+          setSlashFilter(filterText);
         }
       }
       
@@ -154,8 +162,12 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
       <SlashCommandMenu
         editor={editor}
         isOpen={slashMenuOpen}
-        onClose={() => setSlashMenuOpen(false)}
+        onClose={() => {
+          setSlashMenuOpen(false);
+          setSlashFilter('');
+        }}
         position={slashMenuPosition}
+        filter={slashFilter}
       />
     </div>
   );

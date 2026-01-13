@@ -70,11 +70,11 @@ interface SlashCommandMenuProps {
   isOpen: boolean;
   onClose: () => void;
   position: { top: number; left: number };
+  filter: string;
 }
 
-export function SlashCommandMenu({ editor, isOpen, onClose, position }: SlashCommandMenuProps) {
+export function SlashCommandMenu({ editor, isOpen, onClose, position, filter }: SlashCommandMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [filter, setFilter] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const filteredCommands = COMMANDS.filter(
@@ -85,61 +85,67 @@ export function SlashCommandMenu({ editor, isOpen, onClose, position }: SlashCom
 
   const executeCommand = useCallback(
     (command: CommandItem) => {
-      // Delete the slash and any filter text
-      const { from } = editor.state.selection;
-      const textBefore = editor.state.doc.textBetween(
-        Math.max(0, from - filter.length - 1),
-        from,
-        '\n'
-      );
-      const slashPos = textBefore.lastIndexOf('/');
-      if (slashPos !== -1) {
-        const deleteFrom = from - filter.length - 1;
-        editor.chain().focus().deleteRange({ from: deleteFrom, to: from }).run();
-      }
-      
-      command.command(editor);
+      // First close the menu
       onClose();
+      
+      // Get current selection position
+      const { from } = editor.state.selection;
+      
+      // Calculate how much to delete (slash + filter text)
+      const deleteLength = filter.length + 1; // +1 for the slash
+      const deleteFrom = Math.max(0, from - deleteLength);
+      
+      // Delete the slash command text, then apply the formatting
+      editor
+        .chain()
+        .focus()
+        .deleteRange({ from: deleteFrom, to: from })
+        .run();
+      
+      // Now execute the actual command
+      command.command(editor);
     },
     [editor, filter, onClose]
   );
 
+  // Reset selected index when filter changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [filter]);
+
   useEffect(() => {
     if (!isOpen) {
       setSelectedIndex(0);
-      setFilter('');
       return;
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
+        e.stopPropagation();
         setSelectedIndex((i) => (i + 1) % filteredCommands.length);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
+        e.stopPropagation();
         setSelectedIndex((i) => (i - 1 + filteredCommands.length) % filteredCommands.length);
       } else if (e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
         if (filteredCommands[selectedIndex]) {
           executeCommand(filteredCommands[selectedIndex]);
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         onClose();
-      } else if (e.key === 'Backspace' && filter === '') {
-        onClose();
-      } else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
-        setFilter((f) => f + e.key);
-        setSelectedIndex(0);
-      } else if (e.key === 'Backspace') {
-        setFilter((f) => f.slice(0, -1));
-        setSelectedIndex(0);
       }
+      // Let other keys (including Backspace) go through to the editor
+      // The filter is updated via the editor's onUpdate
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filteredCommands, selectedIndex, executeCommand, onClose, filter]);
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, filteredCommands, selectedIndex, executeCommand, onClose]);
 
   useEffect(() => {
     if (menuRef.current && selectedIndex >= 0) {
