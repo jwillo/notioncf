@@ -1,8 +1,9 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { Block } from '../../services/api';
+import { SlashCommandMenu } from './SlashCommandMenu';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -42,6 +43,8 @@ function htmlToBlocks(html: string, pageId: string): Block[] {
 export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedHtmlRef = useRef<string>('');
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+  const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
 
   const editor = useEditor({
     extensions: [
@@ -63,6 +66,34 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
+      
+      // Check for slash command trigger
+      const { from } = editor.state.selection;
+      const textBefore = editor.state.doc.textBetween(
+        Math.max(0, from - 1),
+        from,
+        '\n'
+      );
+      
+      if (textBefore === '/') {
+        // Get cursor position for menu
+        const coords = editor.view.coordsAtPos(from);
+        setSlashMenuPosition({
+          top: coords.bottom + 5,
+          left: coords.left,
+        });
+        setSlashMenuOpen(true);
+      } else if (slashMenuOpen) {
+        // Check if we're still in a slash command context
+        const fullTextBefore = editor.state.doc.textBetween(
+          Math.max(0, from - 20),
+          from,
+          '\n'
+        );
+        if (!fullTextBefore.includes('/')) {
+          setSlashMenuOpen(false);
+        }
+      }
       
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -120,6 +151,12 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
   return (
     <div onKeyDown={handleKeyDown} className="block-editor">
       <EditorContent editor={editor} />
+      <SlashCommandMenu
+        editor={editor}
+        isOpen={slashMenuOpen}
+        onClose={() => setSlashMenuOpen(false)}
+        position={slashMenuPosition}
+      />
     </div>
   );
 }
