@@ -21,31 +21,38 @@ async function upsertUser(db: D1Database, user: UserData): Promise<void> {
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
+  // Check for Cloudflare Access JWT first
   const jwt = context.request.headers.get('CF-Access-JWT-Assertion');
   
-  if (!jwt) {
-    return Response.json(
-      { error: { code: 'UNAUTHORIZED', message: 'Missing Access token' } },
-      { status: 401 }
-    );
-  }
+  let user: UserData;
 
-  try {
-    const payload = JSON.parse(atob(jwt.split('.')[1]));
-    const user: UserData = {
-      id: payload.sub,
-      email: payload.email,
-      name: payload.email?.split('@')[0] || 'User',
+  if (jwt) {
+    // Use Cloudflare Access identity
+    try {
+      const payload = JSON.parse(atob(jwt.split('.')[1]));
+      user = {
+        id: payload.sub,
+        email: payload.email,
+        name: payload.email?.split('@')[0] || 'User',
+      };
+    } catch {
+      return Response.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Invalid Access token' } },
+        { status: 401 }
+      );
+    }
+  } else {
+    // Development mode: use a default user
+    // In production, you should enable Cloudflare Access or another auth provider
+    user = {
+      id: 'dev-user-001',
+      email: 'dev@localhost',
+      name: 'Developer',
     };
-
-    context.data.user = user;
-    await upsertUser(context.env.DB, user);
-
-    return context.next();
-  } catch {
-    return Response.json(
-      { error: { code: 'UNAUTHORIZED', message: 'Invalid Access token' } },
-      { status: 401 }
-    );
   }
+
+  context.data.user = user;
+  await upsertUser(context.env.DB, user);
+
+  return context.next();
 };
