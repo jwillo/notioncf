@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { usePageStore } from '../../stores/pageStore';
 import { useDatabaseStore } from '../../stores/databaseStore';
 import { PageTreeNode } from '../../services/api';
+import { SearchModal } from '../search/SearchModal';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -123,11 +124,24 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const navigate = useNavigate();
   const { pages, isLoading, fetchPages, createPage, deletePage } = usePageStore();
   const { databases, fetchDatabases, createDatabase } = useDatabaseStore();
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     fetchPages();
     fetchDatabases();
   }, [fetchPages, fetchDatabases]);
+
+  // Keyboard shortcut for search (Cmd/Ctrl + K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleCreatePage = async (parentId?: string | null) => {
     const newPageId = await createPage(parentId);
@@ -180,6 +194,18 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </svg>
         </button>
       </div>
+
+      {/* Search Button */}
+      <button
+        onClick={() => setShowSearch(true)}
+        className="mx-2 mt-2 flex items-center gap-2 px-3 py-1.5 text-sm text-notion-text-secondary bg-notion-bg-hover rounded hover:bg-notion-border"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <span className="flex-1 text-left">Search</span>
+        <kbd className="text-xs bg-notion-bg-secondary px-1.5 py-0.5 rounded">⌘K</kbd>
+      </button>
 
       <nav className="flex-1 p-2 overflow-y-auto">
         <div className="flex items-center justify-between px-2 py-1 mb-1">
@@ -287,6 +313,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           Settings
         </Link>
       </div>
+
+      <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </aside>
   );
 }

@@ -124,7 +124,19 @@ export interface DatabaseWithData {
   rows: DatabaseRow[];
 }
 
+export interface SearchResult {
+  id: string;
+  type: 'page' | 'database';
+  title: string;
+  snippet: string;
+  icon: string | null;
+  updatedAt: string;
+}
+
 export const api = {
+  search: (query: string) =>
+    request<{ results: SearchResult[] }>(`/search?q=${encodeURIComponent(query)}`),
+
   pages: {
     list: () => request<{ pages: PageTreeNode[] }>('/pages'),
 
