@@ -12,6 +12,7 @@ interface BlockInput {
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const pageId = context.params.id as string;
   const body = await context.request.json<{ blocks: BlockInput[] }>();
+  const user = context.data.user as { id: string };
 
   if (!body.blocks || !Array.isArray(body.blocks)) {
     return Response.json(
@@ -19,6 +20,32 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       { status: 400 }
     );
   }
+
+  // Get current page title for version snapshot
+  const pageResult = await context.env.DB.prepare(
+    'SELECT title FROM pages WHERE id = ?'
+  ).bind(pageId).first<{ title: string }>();
+
+  // Get current version number
+  const versionResult = await context.env.DB.prepare(
+    'SELECT MAX(version_number) as max_version FROM page_versions WHERE page_id = ?'
+  ).bind(pageId).first<{ max_version: number | null }>();
+  
+  const nextVersion = (versionResult?.max_version || 0) + 1;
+
+  // Create version snapshot before updating
+  const versionId = crypto.randomUUID();
+  await context.env.DB.prepare(`
+    INSERT INTO page_versions (id, page_id, title, blocks_snapshot, created_by, version_number)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(
+    versionId,
+    pageId,
+    pageResult?.title || 'Untitled',
+    JSON.stringify(body.blocks),
+    user.id,
+    nextVersion
+  ).run();
 
   // Delete existing blocks and insert new ones (simple replace strategy for MVP)
   await context.env.DB.prepare('DELETE FROM blocks WHERE page_id = ?').bind(pageId).run();

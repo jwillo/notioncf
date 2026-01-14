@@ -1,12 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePageStore } from '../../stores/pageStore';
 import { BlockEditor } from '../editor/BlockEditor';
 import { PageTitle } from '../editor/PageTitle';
+import { PageHistory } from './PageHistory';
 
 export function PageView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [showHistory, setShowHistory] = useState(false);
   const {
     currentPage,
     currentBlocks,
@@ -69,6 +71,15 @@ export function PageView() {
         <div className="text-xs text-notion-text-secondary">
           {isSaving ? 'Saving...' : 'Saved'}
         </div>
+        <button
+          onClick={() => setShowHistory(true)}
+          className="flex items-center gap-1 text-xs text-notion-text-secondary hover:text-notion-text"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          History
+        </button>
       </div>
 
       <PageTitle
@@ -82,6 +93,13 @@ export function PageView() {
         blocks={currentBlocks}
         onSave={saveContent}
         pageId={currentPage.id}
+      />
+
+      <PageHistory
+        pageId={currentPage.id}
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        onRestore={() => fetchPage(currentPage.id)}
       />
     </div>
   );

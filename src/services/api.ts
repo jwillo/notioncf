@@ -73,6 +73,23 @@ export interface PageWithBlocks {
   blocks: Block[];
 }
 
+export interface PageVersion {
+  id: string;
+  pageId: string;
+  title: string;
+  versionNumber: number;
+  createdAt: string;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface PageVersionWithBlocks extends PageVersion {
+  blocks: Block[];
+}
+
 export interface Database {
   id: string;
   title: string;
@@ -135,6 +152,18 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ blocks }),
       }),
+
+    getHistory: (id: string) =>
+      request<{ versions: PageVersion[] }>(`/pages/${id}/history`),
+
+    getVersion: (pageId: string, versionId: string) =>
+      request<PageVersionWithBlocks>(`/pages/${pageId}/history/${versionId}`),
+
+    restoreVersion: (pageId: string, versionId: string) =>
+      request<{ success: boolean; restoredVersion: number; newVersion: number; updatedAt: string }>(
+        `/pages/${pageId}/history/${versionId}`,
+        { method: 'POST' }
+      ),
   },
 
   databases: {
