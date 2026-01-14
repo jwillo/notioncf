@@ -1,6 +1,8 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { Block } from '../../services/api';
 import { SlashCommandMenu } from './SlashCommandMenu';
@@ -54,6 +56,10 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
         heading: {
           levels: [1, 2, 3],
         },
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
       }),
       Placeholder.configure({
         placeholder: "Type '/' for commands, or just start writing...",

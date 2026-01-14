@@ -46,6 +46,12 @@ const COMMANDS: CommandItem[] = [
     command: (editor) => editor.chain().focus().toggleOrderedList().run(),
   },
   {
+    title: 'To-do List',
+    description: 'Track tasks with a to-do list',
+    icon: '☑',
+    command: (editor) => editor.chain().focus().toggleTaskList().run(),
+  },
+  {
     title: 'Quote',
     description: 'Capture a quote',
     icon: '"',
