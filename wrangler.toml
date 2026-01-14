@@ -13,7 +13,7 @@ database_id = "a57c3449-0157-4e30-bfdc-40a8645681fa"
 binding = "CACHE"
 id = "9295d7728a28443dbc8346c581d33536"
 
-# R2 Bucket - Enable R2 in Cloudflare dashboard first, then uncomment
-# [[r2_buckets]]
-# binding = "FILES"
-# bucket_name = "notioncf-files"
+# R2 Bucket for file uploads
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "notioncf-files"

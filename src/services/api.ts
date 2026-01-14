@@ -251,6 +251,24 @@ export const api = {
       }),
   },
 
+  upload: {
+    image: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      return response.json() as Promise<{
+        url: string;
+        key: string;
+        filename: string;
+        size: number;
+        type: string;
+      }>;
+    },
+  },
+
   tags: {
     list: () => request<{ tags: Tag[] }>('/tags'),
 

@@ -69,6 +69,46 @@ const COMMANDS: CommandItem[] = [
     icon: '—',
     command: (editor) => editor.chain().focus().setHorizontalRule().run(),
   },
+  {
+    title: 'Image',
+    description: 'Upload an image',
+    icon: '🖼',
+    command: (editor) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (file) {
+          // Show loading placeholder
+          const loadingId = `loading-${Date.now()}`;
+          editor.chain().focus().insertContent(`<p id="${loadingId}">Uploading image...</p>`).run();
+          
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            const result = await response.json();
+            
+            if (result.url) {
+              // Remove loading placeholder and insert image
+              const loadingEl = document.getElementById(loadingId);
+              if (loadingEl) loadingEl.remove();
+              editor.chain().focus().setImage({ src: result.url }).run();
+            }
+          } catch (err) {
+            console.error('Upload failed:', err);
+            const loadingEl = document.getElementById(loadingId);
+            if (loadingEl) loadingEl.textContent = 'Upload failed';
+          }
+        }
+      };
+      input.click();
+    },
+  },
 ];
 
 interface SlashCommandMenuProps {

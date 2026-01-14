@@ -4,6 +4,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { Block } from '../../services/api';
 import { SlashCommandMenu } from './SlashCommandMenu';
@@ -71,6 +72,13 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
           class: 'text-notion-accent underline cursor-pointer',
           target: '_blank',
           rel: 'noopener noreferrer',
+        },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: 'max-w-full h-auto rounded-lg my-4',
         },
       }),
       Placeholder.configure({
