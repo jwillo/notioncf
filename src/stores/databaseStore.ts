@@ -25,7 +25,7 @@ interface DatabaseState {
   updateColumn: (columnId: string, data: { name?: string; type?: string }) => Promise<void>;
   deleteColumn: (columnId: string) => Promise<void>;
 
-  addRow: () => Promise<void>;
+  addRow: (initialData?: Record<string, unknown>) => Promise<void>;
   updateRow: (rowId: string, data: Record<string, unknown>) => Promise<void>;
   deleteRow: (rowId: string) => Promise<void>;
 
@@ -162,12 +162,12 @@ export const useDatabaseStore = create<DatabaseState>((set, get) => ({
     }));
   },
 
-  addRow: async () => {
+  addRow: async (initialData?: Record<string, unknown>) => {
     const { currentDatabase } = get();
     if (!currentDatabase) return;
 
     set({ isSaving: true });
-    const { data: newRow, error } = await api.databases.addRow(currentDatabase.id);
+    const { data: newRow, error } = await api.databases.addRow(currentDatabase.id, initialData);
     if (error) {
       set({ isSaving: false, error: error.message });
       return;
