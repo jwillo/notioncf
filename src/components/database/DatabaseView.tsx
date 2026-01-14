@@ -15,7 +15,7 @@ interface DatabaseViewProps {
   hideViewToggle?: boolean;
 }
 
-export function DatabaseView({ embedded, databaseId, defaultView = 'board', hideViewToggle }: DatabaseViewProps) {
+export function DatabaseView({ embedded, databaseId, defaultView = 'board', hideViewToggle = true }: DatabaseViewProps) {
   const { id: routeId } = useParams<{ id: string }>();
   const id = databaseId || routeId;
   const { currentDatabase, columns, fetchDatabase, clearCurrentDatabase } = useDatabaseStore();

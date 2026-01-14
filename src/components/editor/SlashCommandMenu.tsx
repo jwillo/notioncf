@@ -70,6 +70,21 @@ const COMMANDS: CommandItem[] = [
     command: (editor) => editor.chain().focus().setHorizontalRule().run(),
   },
   {
+    title: 'Board',
+    description: 'Embed a kanban board',
+    icon: '📋',
+    command: (editor) => {
+      // Insert a board embed - user will need to select database
+      const databaseId = prompt('Enter the database ID to embed (copy from the database URL):');
+      if (databaseId && databaseId.trim()) {
+        editor.chain().focus().insertContent({
+          type: 'boardEmbed',
+          attrs: { databaseId: databaseId.trim() },
+        }).run();
+      }
+    },
+  },
+  {
     title: 'Image',
     description: 'Upload an image',
     icon: '🖼',
