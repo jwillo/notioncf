@@ -7,6 +7,7 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { Block } from '../../services/api';
 import { SlashCommandMenu } from './SlashCommandMenu';
 import { FormattingToolbar } from './FormattingToolbar';
+import { BlockActions } from './BlockActions';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -165,6 +166,7 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
 
   return (
     <div onKeyDown={handleKeyDown} className="block-editor">
+      <BlockActions editor={editor} currentPageId={pageId} />
       <EditorContent editor={editor} />
       <FormattingToolbar editor={editor} />
       <SlashCommandMenu
