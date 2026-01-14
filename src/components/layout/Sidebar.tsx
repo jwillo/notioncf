@@ -2,8 +2,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { usePageStore } from '../../stores/pageStore';
 import { useDatabaseStore } from '../../stores/databaseStore';
-import { PageTreeNode } from '../../services/api';
+import { PageTreeNode, Tag } from '../../services/api';
 import { SearchModal } from '../search/SearchModal';
+import { TagsSection, TaggedPagesList } from '../tags/TagsSection';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -125,6 +126,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const { pages, isLoading, fetchPages, createPage, deletePage } = usePageStore();
   const { databases, fetchDatabases, createDatabase } = useDatabaseStore();
   const [showSearch, setShowSearch] = useState(false);
+  const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
 
   useEffect(() => {
     fetchPages();
@@ -299,6 +301,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </svg>
           New Database
         </button>
+
+        {/* Tags Section */}
+        <TagsSection
+          onSelectTag={setSelectedTag}
+          selectedTagId={selectedTag?.id || null}
+        />
       </nav>
 
       <div className="p-2 border-t border-notion-border">
@@ -315,6 +323,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
       </div>
 
       <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />
+      {selectedTag && (
+        <TaggedPagesList tag={selectedTag} onClose={() => setSelectedTag(null)} />
+      )}
     </aside>
   );
 }

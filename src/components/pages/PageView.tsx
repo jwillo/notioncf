@@ -4,6 +4,7 @@ import { usePageStore } from '../../stores/pageStore';
 import { BlockEditor } from '../editor/BlockEditor';
 import { PageTitle } from '../editor/PageTitle';
 import { PageHistory } from './PageHistory';
+import { PageTagsEditor } from '../tags/PageTagsEditor';
 
 export function PageView() {
   const { id } = useParams<{ id: string }>();
@@ -88,6 +89,10 @@ export function PageView() {
         onTitleChange={(title) => updatePage(currentPage.id, { title })}
         onIconChange={(icon) => updatePage(currentPage.id, { icon })}
       />
+
+      <div className="mb-4">
+        <PageTagsEditor pageId={currentPage.id} />
+      </div>
 
       <BlockEditor
         blocks={currentBlocks}

@@ -133,6 +133,20 @@ export interface SearchResult {
   updatedAt: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  pageCount: number;
+}
+
+export interface TaggedPage {
+  id: string;
+  title: string;
+  icon: string | null;
+  updatedAt: string;
+}
+
 export const api = {
   search: (query: string) =>
     request<{ results: SearchResult[] }>(`/search?q=${encodeURIComponent(query)}`),
@@ -235,5 +249,44 @@ export const api = {
         method: 'DELETE',
         body: JSON.stringify({ rowId }),
       }),
+  },
+
+  tags: {
+    list: () => request<{ tags: Tag[] }>('/tags'),
+
+    create: (data: { name: string; color?: string }) =>
+      request<Tag>('/tags', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/tags/${id}`, {
+        method: 'DELETE',
+      }),
+
+    update: (id: string, data: { name?: string; color?: string }) =>
+      request<{ success: boolean }>(`/tags/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    getPages: (tagId: string) =>
+      request<{ pages: TaggedPage[] }>(`/tags/${tagId}`),
+
+    addToPage: (pageId: string, tagId: string) =>
+      request<{ success: boolean }>(`/pages/${pageId}/tags`, {
+        method: 'POST',
+        body: JSON.stringify({ tagId }),
+      }),
+
+    removeFromPage: (pageId: string, tagId: string) =>
+      request<{ success: boolean }>(`/pages/${pageId}/tags`, {
+        method: 'DELETE',
+        body: JSON.stringify({ tagId }),
+      }),
+
+    getPageTags: (pageId: string) =>
+      request<{ tags: Array<{ id: string; name: string; color: string }> }>(`/pages/${pageId}/tags`),
   },
 };
