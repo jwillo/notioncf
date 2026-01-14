@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Editor } from '@tiptap/react';
+import { api, Database } from '../../services/api';
 
 interface CommandItem {
   title: string;
   description: string;
   icon: string;
-  command: (editor: Editor) => void;
+  command: (editor: Editor, onShowBoardSelector?: () => void) => void;
+  needsBoardSelector?: boolean;
 }
 
 const COMMANDS: CommandItem[] = [
@@ -73,14 +75,10 @@ const COMMANDS: CommandItem[] = [
     title: 'Board',
     description: 'Embed a kanban board',
     icon: '📋',
-    command: (editor) => {
-      // Insert a board embed - user will need to select database
-      const databaseId = prompt('Enter the database ID to embed (copy from the database URL):');
-      if (databaseId && databaseId.trim()) {
-        editor.chain().focus().insertContent({
-          type: 'boardEmbed',
-          attrs: { databaseId: databaseId.trim() },
-        }).run();
+    needsBoardSelector: true,
+    command: (_editor, onShowBoardSelector) => {
+      if (onShowBoardSelector) {
+        onShowBoardSelector();
       }
     },
   },
@@ -142,6 +140,55 @@ interface SlashCommandMenuProps {
 export function SlashCommandMenu({ editor, isOpen, onClose, position, filter }: SlashCommandMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [showBoardSelector, setShowBoardSelector] = useState(false);
+  const [databases, setDatabases] = useState<Database[]>([]);
+  const [isLoadingDatabases, setIsLoadingDatabases] = useState(false);
+
+  const loadDatabases = async () => {
+    setIsLoadingDatabases(true);
+    const result = await api.databases.list();
+    if (result.data) {
+      setDatabases(result.data.databases);
+    }
+    setIsLoadingDatabases(false);
+  };
+
+  const handleSelectDatabase = (databaseId: string) => {
+    editor.chain().focus().insertContent({
+      type: 'boardEmbed',
+      attrs: { databaseId },
+    }).run();
+    setShowBoardSelector(false);
+    onClose();
+  };
+
+  const handleCreateNewBoard = async () => {
+    const title = 'New Board';
+    const result = await api.databases.create({ title });
+    if (result.data) {
+      // Create default Status column
+      const colResult = await api.databases.addColumn(result.data.id, {
+        name: 'Status',
+        type: 'select',
+      });
+      if (colResult.data) {
+        await api.databases.updateColumns(result.data.id, [{
+          id: colResult.data.id,
+          config: {
+            options: [
+              { id: crypto.randomUUID(), label: 'To Do', color: '#e5e7eb' },
+              { id: crypto.randomUUID(), label: 'In Progress', color: '#fef08a' },
+              { id: crypto.randomUUID(), label: 'Done', color: '#bbf7d0' },
+            ]
+          }
+        }]);
+      }
+      // Add Title column
+      await api.databases.addColumn(result.data.id, { name: 'Title', type: 'text' });
+      // Embed the new board
+      handleSelectDatabase(result.data.id);
+    }
+  };
 
   const filteredCommands = COMMANDS.filter(
     (cmd) =>
@@ -151,6 +198,13 @@ export function SlashCommandMenu({ editor, isOpen, onClose, position, filter }: 
 
   const executeCommand = useCallback(
     (command: CommandItem) => {
+      // Handle board selector specially
+      if (command.needsBoardSelector) {
+        loadDatabases();
+        setShowBoardSelector(true);
+        return;
+      }
+      
       // First close the menu
       onClose();
       
@@ -222,7 +276,67 @@ export function SlashCommandMenu({ editor, isOpen, onClose, position, filter }: 
     }
   }, [selectedIndex]);
 
-  if (!isOpen || filteredCommands.length === 0) return null;
+  if (!isOpen && !showBoardSelector) return null;
+
+  // Board Selector Modal
+  if (showBoardSelector) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowBoardSelector(false)}>
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+          <div className="px-4 py-3 border-b border-notion-border">
+            <h3 className="font-medium text-notion-text">Embed a Board</h3>
+            <p className="text-xs text-notion-text-secondary mt-1">
+              Select an existing board or create a new one
+            </p>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {/* Create New Board Option */}
+            <button
+              onClick={handleCreateNewBoard}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-notion-accent hover:bg-notion-bg-hover border-b border-notion-border"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create new board
+            </button>
+
+            {/* Existing Databases */}
+            {isLoadingDatabases ? (
+              <div className="p-4 text-center text-notion-text-secondary">Loading...</div>
+            ) : databases.length === 0 ? (
+              <div className="p-4 text-center text-notion-text-secondary">
+                No boards yet
+              </div>
+            ) : (
+              databases.map((db) => (
+                <button
+                  key={db.id}
+                  onClick={() => handleSelectDatabase(db.id)}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-notion-bg-hover text-left"
+                >
+                  <svg className="w-5 h-5 text-notion-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+                  </svg>
+                  <span className="truncate">{db.title}</span>
+                </button>
+              ))
+            )}
+          </div>
+          <div className="px-4 py-3 border-t border-notion-border">
+            <button
+              onClick={() => setShowBoardSelector(false)}
+              className="w-full px-3 py-1.5 text-sm text-notion-text-secondary hover:bg-notion-bg-hover rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (filteredCommands.length === 0) return null;
 
   return (
     <div
