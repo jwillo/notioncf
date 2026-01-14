@@ -80,9 +80,11 @@ const COMMANDS: CommandItem[] = [
       input.onchange = async () => {
         const file = input.files?.[0];
         if (file) {
+          // Store position before inserting placeholder
+          const pos = editor.state.selection.from;
+          
           // Show loading placeholder
-          const loadingId = `loading-${Date.now()}`;
-          editor.chain().focus().insertContent(`<p id="${loadingId}">Uploading image...</p>`).run();
+          editor.chain().focus().insertContent('Uploading image...').run();
           
           try {
             const formData = new FormData();
@@ -94,15 +96,18 @@ const COMMANDS: CommandItem[] = [
             const result = await response.json();
             
             if (result.url) {
-              // Remove loading placeholder and insert image
-              const loadingEl = document.getElementById(loadingId);
-              if (loadingEl) loadingEl.remove();
-              editor.chain().focus().setImage({ src: result.url }).run();
+              // Select and delete the placeholder text, then insert image
+              const placeholderLength = 'Uploading image...'.length;
+              editor
+                .chain()
+                .focus()
+                .setTextSelection({ from: pos, to: pos + placeholderLength })
+                .deleteSelection()
+                .setImage({ src: result.url })
+                .run();
             }
           } catch (err) {
             console.error('Upload failed:', err);
-            const loadingEl = document.getElementById(loadingId);
-            if (loadingEl) loadingEl.textContent = 'Upload failed';
           }
         }
       };
