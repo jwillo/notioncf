@@ -10,6 +10,7 @@ import { Block } from '../../services/api';
 import { SlashCommandMenu } from './SlashCommandMenu';
 import { FormattingToolbar } from './FormattingToolbar';
 import { BlockActions } from './BlockActions';
+import { BoardEmbedExtension } from './BoardEmbed';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -81,6 +82,7 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
           class: 'max-w-full h-auto rounded-lg my-4',
         },
       }),
+      BoardEmbedExtension,
       Placeholder.configure({
         placeholder: "Type '/' for commands, or just start writing...",
         emptyEditorClass: 'is-editor-empty',
