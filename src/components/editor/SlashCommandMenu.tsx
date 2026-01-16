@@ -83,6 +83,17 @@ const COMMANDS: CommandItem[] = [
     },
   },
   {
+    title: 'Drawing',
+    description: 'Create an Excalidraw diagram',
+    icon: '✏️',
+    command: (editor) => {
+      editor.chain().focus().insertContent({
+        type: 'excalidraw',
+        attrs: { data: JSON.stringify({ elements: [] }) },
+      }).run();
+    },
+  },
+  {
     title: 'Image',
     description: 'Upload an image',
     icon: '🖼',

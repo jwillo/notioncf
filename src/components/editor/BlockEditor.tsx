@@ -11,6 +11,7 @@ import { SlashCommandMenu } from './SlashCommandMenu';
 import { FormattingToolbar } from './FormattingToolbar';
 import { BlockActions } from './BlockActions';
 import { BoardEmbedExtension } from './BoardEmbed';
+import { ExcalidrawExtension } from './ExcalidrawEmbed';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -83,6 +84,7 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
         },
       }),
       BoardEmbedExtension,
+      ExcalidrawExtension,
       Placeholder.configure({
         placeholder: "Type '/' for commands, or just start writing...",
         emptyEditorClass: 'is-editor-empty',
