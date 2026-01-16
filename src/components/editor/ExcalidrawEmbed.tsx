@@ -10,18 +10,8 @@ function ExcalidrawComponent({ node, updateAttributes }: NodeViewProps) {
   const url = node.attrs.url || '';
   const hasUrl = url.length > 0;
 
-  // Convert excalidraw.com URL to embed URL
+  // Just return the URL as-is for embedding
   const getEmbedUrl = (inputUrl: string) => {
-    // Handle various Excalidraw URL formats
-    // https://excalidraw.com/#json=... -> embed
-    // https://excalidraw.com/#room=... -> embed  
-    if (inputUrl.includes('excalidraw.com')) {
-      // Already has hash params, just add embed flag if needed
-      if (inputUrl.includes('#')) {
-        return inputUrl.replace('excalidraw.com/', 'excalidraw.com/') + '&embed=true';
-      }
-      return inputUrl;
-    }
     return inputUrl;
   };
 
@@ -33,9 +23,15 @@ function ExcalidrawComponent({ node, updateAttributes }: NodeViewProps) {
     setUrlInput('');
   };
 
+  const EXCALIDRAW_HOST = 'https://excalidraw-cf.pages.dev';
+
   const handleCreateNew = () => {
-    // Open Excalidraw in new tab, user can save and paste link back
-    window.open('https://excalidraw.com/', '_blank');
+    // Generate a new drawing ID and open self-hosted Excalidraw
+    const newId = crypto.randomUUID();
+    const newUrl = `${EXCALIDRAW_HOST}/#id=${newId}`;
+    window.open(newUrl, '_blank');
+    // Pre-fill the URL input
+    setUrlInput(newUrl);
   };
 
   // URL input mode
@@ -54,12 +50,12 @@ function ExcalidrawComponent({ node, updateAttributes }: NodeViewProps) {
                 type="url"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://excalidraw.com/#json=..."
+                placeholder="https://excalidraw-cf.pages.dev/#id=..."
                 className="w-full px-3 py-2 text-sm border border-notion-border rounded focus:outline-none focus:ring-2 focus:ring-notion-accent"
                 autoFocus
               />
               <p className="text-xs text-notion-text-secondary mt-1">
-                Open Excalidraw, create your drawing, then use Menu → Export → Link to get a shareable link
+                Click "Create new drawing" to open the editor, then paste the URL here when done
               </p>
             </div>
             
