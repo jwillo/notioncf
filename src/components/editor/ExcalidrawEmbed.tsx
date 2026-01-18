@@ -1,127 +1,196 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
+import { Excalidraw, exportToSvg } from '@excalidraw/excalidraw';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 function ExcalidrawComponent({ node, updateAttributes }: NodeViewProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [urlInput, setUrlInput] = useState('');
+  const [drawingData, setDrawingData] = useState<any>(null);
+  const [previewSvg, setPreviewSvg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const saveTimeoutRef = useRef<number | null>(null);
   
-  const url = node.attrs.url || '';
-  const hasUrl = url.length > 0;
+  const drawingId = node.attrs.drawingId || '';
+  const hasDrawing = drawingId.length > 0;
 
-  // Just return the URL as-is for embedding
-  const getEmbedUrl = (inputUrl: string) => {
-    return inputUrl;
-  };
-
-  const handleSaveUrl = () => {
-    if (urlInput.trim()) {
-      updateAttributes({ url: urlInput.trim() });
+  // Load drawing data from API
+  const loadDrawing = useCallback(async (id: string) => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/drawings/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDrawingData(data);
+        // Generate preview
+        if (data.elements && data.elements.length > 0) {
+          const svg = await exportToSvg({
+            elements: data.elements,
+            appState: { exportWithDarkMode: false },
+            files: data.files || null,
+          });
+          setPreviewSvg(svg.outerHTML);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load drawing:', e);
     }
-    setIsEditing(false);
-    setUrlInput('');
-  };
+    setIsLoading(false);
+  }, []);
+
+  // Save drawing to API
+  const saveDrawing = useCallback(async (id: string, data: any) => {
+    try {
+      await fetch(`/api/drawings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      // Update preview
+      if (data.elements && data.elements.length > 0) {
+        const svg = await exportToSvg({
+          elements: data.elements,
+          appState: { exportWithDarkMode: false },
+          files: data.files || null,
+        });
+        setPreviewSvg(svg.outerHTML);
+      }
+    } catch (e) {
+      console.error('Failed to save drawing:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasDrawing) {
+      loadDrawing(drawingId);
+    }
+  }, [drawingId, hasDrawing, loadDrawing]);
 
   const handleCreateNew = () => {
-    // Generate a new drawing ID and open in /draw route
     const newId = crypto.randomUUID();
-    const newUrl = `/draw/${newId}`;
-    window.open(newUrl, '_blank');
-    // Pre-fill the URL input
-    setUrlInput(newUrl);
+    updateAttributes({ drawingId: newId });
+    setDrawingData({ elements: [], appState: {}, files: {} });
+    setIsEditing(true);
   };
 
-  // URL input mode
-  if (isEditing || !hasUrl) {
+  const handleChange = useCallback(
+    (elements: readonly any[], appState: any, files: any) => {
+      if (!drawingId) return;
+      
+      const data = {
+        elements: [...elements],
+        appState: {
+          viewBackgroundColor: appState.viewBackgroundColor,
+        },
+        files,
+      };
+      setDrawingData(data);
+      
+      // Debounce saves
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = window.setTimeout(() => {
+        saveDrawing(drawingId, data);
+      }, 1000);
+    },
+    [drawingId, saveDrawing]
+  );
+
+  const handleClose = () => {
+    // Force save on close
+    if (drawingId && drawingData) {
+      saveDrawing(drawingId, drawingData);
+    }
+    setIsEditing(false);
+  };
+
+  // Full-screen editing mode
+  if (isEditing) {
     return (
       <NodeViewWrapper>
-        <div className="border border-notion-border rounded-lg my-4 p-4 bg-notion-bg-secondary">
-          <div className="text-sm font-medium text-notion-text mb-3">Embed Excalidraw Drawing</div>
-          
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs text-notion-text-secondary mb-1">
-                Paste Excalidraw share link
-              </label>
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="/draw/..."
-                className="w-full px-3 py-2 text-sm border border-notion-border rounded focus:outline-none focus:ring-2 focus:ring-notion-accent"
-                autoFocus
-              />
-              <p className="text-xs text-notion-text-secondary mt-1">
-                Click "Create new drawing" to open the editor, then paste the URL here when done
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSaveUrl}
-                disabled={!urlInput.trim()}
-                className="px-3 py-1.5 text-sm bg-notion-accent text-white rounded hover:bg-blue-600 disabled:opacity-50"
-              >
-                Embed
-              </button>
-              <button
-                onClick={handleCreateNew}
-                className="px-3 py-1.5 text-sm text-notion-accent hover:bg-notion-bg-hover rounded"
-              >
-                Create new drawing →
-              </button>
-              {hasUrl && (
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="px-3 py-1.5 text-sm text-notion-text-secondary hover:bg-notion-bg-hover rounded ml-auto"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
+            <span className="font-medium text-gray-900">Excalidraw</span>
+            <button
+              onClick={handleClose}
+              className="px-4 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+            >
+              Done
+            </button>
+          </div>
+          <div className="flex-1">
+            <Excalidraw
+              initialData={drawingData}
+              onChange={handleChange}
+            />
           </div>
         </div>
       </NodeViewWrapper>
     );
   }
 
-  // Embedded view
+  // Empty state - no drawing yet
+  if (!hasDrawing) {
+    return (
+      <NodeViewWrapper>
+        <div
+          className="border border-dashed border-gray-300 rounded-lg my-4 p-8 bg-gray-50 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          onClick={handleCreateNew}
+        >
+          <div className="text-center">
+            <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            <div className="text-sm font-medium text-gray-700">Click to create a drawing</div>
+            <div className="text-xs text-gray-500 mt-1">Opens Excalidraw editor</div>
+          </div>
+        </div>
+      </NodeViewWrapper>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <NodeViewWrapper>
+        <div className="border border-gray-200 rounded-lg my-4 p-8 bg-white">
+          <div className="text-center text-gray-500">Loading drawing...</div>
+        </div>
+      </NodeViewWrapper>
+    );
+  }
+
+  // Preview mode with SVG
   return (
     <NodeViewWrapper>
-      <div className="border border-notion-border rounded-lg my-4 overflow-hidden">
-        <iframe
-          src={getEmbedUrl(url)}
-          className="w-full h-96 border-0"
-          title="Excalidraw drawing"
-          allow="clipboard-read; clipboard-write"
-        />
-        <div className="px-3 py-2 bg-notion-bg-secondary border-t border-notion-border flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-notion-text-secondary">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-            Excalidraw
+      <div
+        className="border border-gray-200 rounded-lg my-4 overflow-hidden cursor-pointer hover:border-blue-400 transition-colors"
+        onClick={() => setIsEditing(true)}
+      >
+        {previewSvg ? (
+          <div 
+            className="bg-white p-4 flex items-center justify-center min-h-[200px]"
+            dangerouslySetInnerHTML={{ __html: previewSvg }}
+          />
+        ) : (
+          <div className="bg-white p-8 flex items-center justify-center min-h-[200px]">
+            <div className="text-center text-gray-500">
+              <svg className="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <span className="text-sm">Click to edit drawing</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-notion-accent hover:underline"
-            >
-              Open in Excalidraw →
-            </a>
-            <button
-              onClick={() => {
-                setUrlInput(url);
-                setIsEditing(true);
-              }}
-              className="text-xs text-notion-text-secondary hover:text-notion-text"
-            >
-              Change
-            </button>
-          </div>
+        )}
+        <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 flex items-center gap-2 text-xs text-gray-500">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+          Excalidraw · Click to edit
         </div>
       </div>
     </NodeViewWrapper>
@@ -136,7 +205,7 @@ export const ExcalidrawExtension = Node.create({
 
   addAttributes() {
     return {
-      url: {
+      drawingId: {
         default: '',
       },
     };
