@@ -23,12 +23,10 @@ function ExcalidrawComponent({ node, updateAttributes }: NodeViewProps) {
     setUrlInput('');
   };
 
-  const EXCALIDRAW_HOST = 'https://excalidraw-cf.pages.dev';
-
   const handleCreateNew = () => {
-    // Generate a new drawing ID and open self-hosted Excalidraw
+    // Generate a new drawing ID and open in /draw route
     const newId = crypto.randomUUID();
-    const newUrl = `${EXCALIDRAW_HOST}/#id=${newId}`;
+    const newUrl = `/draw/${newId}`;
     window.open(newUrl, '_blank');
     // Pre-fill the URL input
     setUrlInput(newUrl);
@@ -50,7 +48,7 @@ function ExcalidrawComponent({ node, updateAttributes }: NodeViewProps) {
                 type="url"
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://excalidraw-cf.pages.dev/#id=..."
+                placeholder="/draw/..."
                 className="w-full px-3 py-2 text-sm border border-notion-border rounded focus:outline-none focus:ring-2 focus:ring-notion-accent"
                 autoFocus
               />

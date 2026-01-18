@@ -13,6 +13,10 @@ database_id = "a57c3449-0157-4e30-bfdc-40a8645681fa"
 binding = "CACHE"
 id = "9295d7728a28443dbc8346c581d33536"
 
+[[kv_namespaces]]
+binding = "DRAWINGS"
+id = "1157474260fd42ce8484acc04d942323"
+
 # R2 Bucket for file uploads
 [[r2_buckets]]
 binding = "FILES"
