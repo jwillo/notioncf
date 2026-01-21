@@ -84,12 +84,12 @@ const COMMANDS: CommandItem[] = [
   },
   {
     title: 'Drawing',
-    description: 'Create an Excalidraw diagram',
+    description: 'Embed an Excalidraw diagram',
     icon: '✏️',
     command: (editor) => {
       editor.chain().focus().insertContent({
         type: 'excalidraw',
-        attrs: { drawingId: '' },
+        attrs: { url: '' },
       }).run();
     },
   },
