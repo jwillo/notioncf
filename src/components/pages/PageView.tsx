@@ -90,6 +90,26 @@ export function PageView() {
         onIconChange={(icon) => updatePage(currentPage.id, { icon })}
       />
 
+      <div className="flex items-center gap-4 text-xs text-notion-text-secondary mb-4">
+        <span>
+          Created {new Date(currentPage.createdAt).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })}
+        </span>
+        <span>·</span>
+        <span>
+          Updated {new Date(currentPage.updatedAt).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          })}
+        </span>
+      </div>
+
       <div className="mb-4">
         <PageTagsEditor pageId={currentPage.id} />
       </div>

@@ -5,6 +5,10 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
+import Table from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableCell from '@tiptap/extension-table-cell';
+import TableHeader from '@tiptap/extension-table-header';
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { Block } from '../../services/api';
 import { SlashCommandMenu } from './SlashCommandMenu';
@@ -12,6 +16,7 @@ import { FormattingToolbar } from './FormattingToolbar';
 import { BlockActions } from './BlockActions';
 import { BoardEmbedExtension } from './BoardEmbed';
 import { ExcalidrawExtension } from './ExcalidrawEmbed';
+import { PageLinkExtension, PageLinkMenu } from './PageLink';
 
 interface BlockEditorProps {
   blocks: Block[];
@@ -54,6 +59,10 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
   const [slashMenuOpen, setSlashMenuOpen] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
   const [slashFilter, setSlashFilter] = useState('');
+  const [pageLinkMenuOpen, setPageLinkMenuOpen] = useState(false);
+  const [pageLinkMenuPosition, setPageLinkMenuPosition] = useState({ top: 0, left: 0 });
+  const [pageLinkFilter, setPageLinkFilter] = useState('');
+  const [pageLinkStartPos, setPageLinkStartPos] = useState(0);
 
   const editor = useEditor({
     extensions: [
@@ -85,6 +94,24 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
       }),
       BoardEmbedExtension,
       ExcalidrawExtension,
+      PageLinkExtension,
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full my-4',
+        },
+      }),
+      TableRow,
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: 'border border-gray-300 bg-gray-100 px-3 py-2 text-left font-medium',
+        },
+      }),
+      TableCell.configure({
+        HTMLAttributes: {
+          class: 'border border-gray-300 px-3 py-2',
+        },
+      }),
       Placeholder.configure({
         placeholder: "Type '/' for commands, or just start writing...",
         emptyEditorClass: 'is-editor-empty',
@@ -99,16 +126,48 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       
-      // Check for slash command trigger
       const { from } = editor.state.selection;
+      const textBefore2 = editor.state.doc.textBetween(
+        Math.max(0, from - 2),
+        from,
+        '\n'
+      );
+      
+      // Check for [[ page link trigger
+      if (textBefore2 === '[[') {
+        const coords = editor.view.coordsAtPos(from);
+        setPageLinkMenuPosition({
+          top: coords.bottom + 5,
+          left: coords.left,
+        });
+        setPageLinkMenuOpen(true);
+        setPageLinkFilter('');
+        setPageLinkStartPos(from - 2);
+      } else if (pageLinkMenuOpen) {
+        // Check if we're still in a page link context
+        const fullTextBefore = editor.state.doc.textBetween(
+          Math.max(0, from - 50),
+          from,
+          '\n'
+        );
+        const bracketIndex = fullTextBefore.lastIndexOf('[[');
+        if (bracketIndex === -1 || fullTextBefore.includes(']]')) {
+          setPageLinkMenuOpen(false);
+          setPageLinkFilter('');
+        } else {
+          const filterText = fullTextBefore.slice(bracketIndex + 2);
+          setPageLinkFilter(filterText);
+        }
+      }
+      
+      // Check for slash command trigger
       const textBefore = editor.state.doc.textBetween(
         Math.max(0, from - 1),
         from,
         '\n'
       );
       
-      if (textBefore === '/') {
-        // Get cursor position for menu
+      if (textBefore === '/' && !pageLinkMenuOpen) {
         const coords = editor.view.coordsAtPos(from);
         setSlashMenuPosition({
           top: coords.bottom + 5,
@@ -117,7 +176,6 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
         setSlashMenuOpen(true);
         setSlashFilter('');
       } else if (slashMenuOpen) {
-        // Check if we're still in a slash command context
         const fullTextBefore = editor.state.doc.textBetween(
           Math.max(0, from - 20),
           from,
@@ -128,7 +186,6 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
           setSlashMenuOpen(false);
           setSlashFilter('');
         } else {
-          // Extract filter text after the slash
           const filterText = fullTextBefore.slice(slashIndex + 1);
           setSlashFilter(filterText);
         }
@@ -201,6 +258,31 @@ export function BlockEditor({ blocks, onSave, pageId }: BlockEditorProps) {
         }}
         position={slashMenuPosition}
         filter={slashFilter}
+      />
+      <PageLinkMenu
+        isOpen={pageLinkMenuOpen}
+        onClose={() => {
+          setPageLinkMenuOpen(false);
+          setPageLinkFilter('');
+        }}
+        onSelect={(selectedPageId, selectedPageTitle) => {
+          // Delete the [[ and any filter text, then insert the page link
+          const { from } = editor.state.selection;
+          const deleteFrom = pageLinkStartPos;
+          editor
+            .chain()
+            .focus()
+            .deleteRange({ from: deleteFrom, to: from })
+            .insertContent({
+              type: 'pageLink',
+              attrs: { pageId: selectedPageId, pageTitle: selectedPageTitle },
+            })
+            .run();
+          setPageLinkMenuOpen(false);
+          setPageLinkFilter('');
+        }}
+        position={pageLinkMenuPosition}
+        filter={pageLinkFilter}
       />
     </div>
   );

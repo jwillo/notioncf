@@ -72,6 +72,12 @@ const COMMANDS: CommandItem[] = [
     command: (editor) => editor.chain().focus().setHorizontalRule().run(),
   },
   {
+    title: 'Table',
+    description: 'Insert a table',
+    icon: '▦',
+    command: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
     title: 'Board',
     description: 'Embed a kanban board',
     icon: '📋',
